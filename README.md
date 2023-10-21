@@ -1,5 +1,19 @@
 RL for covariance shrinkage factor estimation.
 
+## Tasks
+
+- Currently have an environment, but it only uses the reweight prices, not all the prices in between
+  - This is good for sim speed but the obs space is too small
+  - Plan is to wrap this environment:
+    - Wrapper contains all prices
+    - Calls wrapped sim, passing only the prices for reweight periods
+  - This gives us access to larger obs space
+    - Could calculate a returns series to calculate better rewards
+- Using default ray model which is fine for testing but need to implement multi head model one env is done.
+
+
+
+## Log
 
 I just have to wrap an existing env:
 
@@ -20,7 +34,6 @@ Reference portfolio envs:
 
 - [env_portfolio.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_portfolio_allocation/env_portfolio.py)
 - [env_stocktrading_np.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_stock_trading/env_stocktrading_np.py)
-- 
 
 ```
 (RolloutWorker pid=586260) For your custom (single agent) gym.Env classes:                                                                                                                                            │
