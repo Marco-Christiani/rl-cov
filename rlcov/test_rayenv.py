@@ -1,4 +1,5 @@
 import pandas as pd
+from icecream import ic
 import pytest
 
 from . import rayenv
@@ -19,7 +20,7 @@ def config():
         "rebalance_freq": 7,  # 1 week
         "data_freq": 1,
         "freq_unit": "d",
-        "init_cash": 10000,
+        "init_cash": 100,
         "txn_cost": 0.001,
     }
 
@@ -62,7 +63,6 @@ def test_ray_trading_env(df_dict, config, weights):
 
     })
     assert env.action_space.shape == (len(config['tickers']),)
-    from icecream import ic
     ic(env.reset())
 
     for i, w in weights.iterrows():
@@ -70,4 +70,27 @@ def test_ray_trading_env(df_dict, config, weights):
         ic(obs, reward, done, info)
         if done:
             break
+
+    # verify against vectorbt
+    # vbt will account for timestamps
+    import vectorbtpro as vbt
+    # use a profiler to benchmark how long this takes
+
+    portfolio = vbt.Portfolio.from_orders(
+        open=df_dict['open'],
+        close=df_dict['close'],
+        size=weights,
+        init_cash=100,
+        size_type='targetpercent',
+        call_seq='auto',  # first sell then buy
+        group_by=True,  # one group
+        cash_sharing=True,  # assets share the same cash
+        fees=1e-3,
+        fixed_fees=0,
+        slippage=0  # costs
+    )
+
+    ic(portfolio.get_asset_value(group_by=False))
+    ic(portfolio.get_value())
+    # TODO: find out why these are different results
 
