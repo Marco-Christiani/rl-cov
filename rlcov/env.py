@@ -1,10 +1,11 @@
+import gymnasium as gym
 import numpy as np
 import vectorbtpro as vbt
-import gymnasium as gym
 
 
 class TradingEnv(gym.Env):
-    def __init__(self, open_prices, close_prices, init_cash=100, txn_cost=1e-3):
+    def __init__(self, open_prices: np.ndarray, close_prices: np.ndarray, init_cash: float = 100.0,
+                 txn_cost: float = 1e-3):
         self.txn_cost = txn_cost
         self.open_prices = open_prices
         self.close_prices = close_prices
@@ -21,7 +22,6 @@ class TradingEnv(gym.Env):
             val_price=np.nan,
             value=np.nan
         ) for _ in range(self.num_assets)]
-        self.reset()
 
     def reset(self, **kwargs):
         self.exec_states = [vbt.pf_enums.ExecState(
@@ -44,8 +44,16 @@ class TradingEnv(gym.Env):
         ----------
         target_pcts : np.ndarray
             Target percentages for each asset. Should sum to 1.
+
+        Returns
+        -------
+        tuple
+            (observation, reward, done, info)
+            reward is the one step return
+             i.e. the percentage change in portfolio value from beginning of the step to the end, using next open price
+            Time between steps is determined by the data provided, hence limited by its frequency.
         """
-        if self.current_step >= len(self.close_prices)-1:
+        if self.current_step >= len(self.close_prices) - 1:
             raise ValueError("Simulation has reached the end of the data.")
         starting_portfolio_value = self.portfolio_value.copy()
         target_values = [self.portfolio_value * pct for pct in target_pcts]
@@ -60,17 +68,21 @@ class TradingEnv(gym.Env):
             if not np.isnan(target_pcts[i]) and self.position_values[i] < target_values[i]:
                 self._execute_order(i, target_pcts[i])
 
-        # stepping the env will change valuations, so freeze the current value to reflect the current state
+        end_portfolio_value = self.portfolio_value.copy()
+        self.current_step += 1
+        reward = (self.portfolio_value - starting_portfolio_value) / starting_portfolio_value
         info = dict(
-            portfolio_value=self.portfolio_value.copy(),
-            position_values=self.position_values.copy(),
+            end_portfolio_value=end_portfolio_value,
+            next_prices=self.open_prices[self.current_step],
+            # one step return is the percentage change in portfolio value, using next open price
+            one_step_return=(self.portfolio_value - starting_portfolio_value) / starting_portfolio_value,
+            next_portfolio_value=self.portfolio_value,
+            next_position_values=self.position_values,
             position_pct=[self.position_values[i] / self.portfolio_value for i in range(self.num_assets)],
             cash=self.shared_cash,
         )
-        one_step_return = (self.portfolio_value - starting_portfolio_value) / starting_portfolio_value
-        self.current_step += 1
-        done = self.current_step >= len(self.close_prices)-1
-        return self.close_prices[self.current_step], one_step_return, done, info
+        done = self.current_step >= len(self.close_prices) - 1
+        return self.open_prices[self.current_step], reward, done, info
 
     def _execute_order(self, asset_idx, target_pct):
         self.exec_states[asset_idx] = vbt.pf_enums.ExecState(
@@ -84,7 +96,7 @@ class TradingEnv(gym.Env):
         )
         order = vbt.pf_nb.order_nb(
             size=target_pct,
-            price=self.close_prices[self.current_step, asset_idx],
+            price=self.close_prices[self.current_step, asset_idx],  # execute at close price
             size_type=vbt.pf_enums.SizeType.TargetPercent,
             fees=self.txn_cost,
         )
@@ -109,6 +121,7 @@ class TradingEnv(gym.Env):
 
     def render(self):
         pass
+
 
 if __name__ == '__main__':
     from icecream import ic
@@ -140,3 +153,30 @@ if __name__ == '__main__':
     for weights in weight_list:
         obs, reward, done, info = simulator.step(weights)
         ic(obs, reward, done, info)
+
+
+    # Prices for backtesting (using closing prices)
+    # prices = df['close'].unstack(level='symbol')
+    ic(df['close'])
+    portfolio = vbt.Portfolio.from_orders(
+        open=df['open'][:-1],
+        close=df['close'][:-1],
+        size=pd.DataFrame({
+            'AAPL': weight_list[:, 0],
+            'GOOG': weight_list[:, 1],
+        }),
+        init_cash=100,
+        size_type='targetpercent',
+        call_seq='auto',  # first sell then buy
+        group_by=True,  # one group
+        cash_sharing=True,  # assets share the same cash
+        fees=0.001,
+        fixed_fees=0,
+        slippage=0  # costs
+    )
+    # print(portfolio.asset_flow())
+    # print(portfolio.cash_flow())
+    ic(portfolio.get_asset_value(group_by=False))
+    ic(portfolio.value)
+    # print(portfolio.order_records)
+    ic(portfolio.stats())
