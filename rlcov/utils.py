@@ -1,4 +1,5 @@
 import os
+import re
 
 import numpy as np
 import pandas as pd
@@ -45,6 +46,57 @@ def load_local_data(tickers, start_date, end_date, freq='1d'):
         temp_df = temp_df.resample(freq).agg({'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last'})
         df_dict[sym] = temp_df[start_date:end_date]
     return df_dict
+
+
+def parse_duration_string(duration_str: str) -> np.timedelta64:
+    """
+    Parse a mixed unit string (with or without spaces) to a numpy.timedelta64 object.
+
+    Parameters:
+    - duration_str (str): A string representation of duration (e.g., "2h15m" or "2 h 15 m").
+
+    Returns:
+    - np.timedelta64: The corresponding timedelta object.
+    """
+
+    def convert_unit_for_numpy(freq_unit):
+        """Convert pandas freq_unit to numpy's timedelta64 units."""
+        conversion = {
+            "min": "m",
+            "T": "m",
+            "d": "D",
+            "w": "W"
+        }
+        return conversion.get(freq_unit, freq_unit)
+
+    matches = re.findall(r'(\d+)?(\D+)', duration_str)
+
+    total_duration = np.timedelta64(0)
+    for value, unit in matches:
+        # if unit only, without number, default to 1 of that unit
+        numeric_value = int(value) if value else 1
+        total_duration += np.timedelta64(numeric_value, convert_unit_for_numpy(unit.strip()))
+
+    return total_duration
+
+
+def calculate_interval_ratio(interval1: str, interval2_str: str) -> int:
+    """
+    Calculate the ratio of two time intervals based on the provided duration strings.
+
+    I.e. how many interval2s fit into interval1.
+
+    Parameters:
+    - interval1 (str): A string representation of the first interval (e.g., "2h").
+    - interval2_str (str): A string representation of the second interval (e.g., "1 h 15 m").
+
+    Returns:
+    - int: The ratio of the two intervals.
+    """
+    interval1_duration = parse_duration_string(interval1)
+    interval2_duration = parse_duration_string(interval2_str)
+    interval_ratio = interval1_duration // interval2_duration
+    return int(interval_ratio)
 
 
 class EWMAcc:
@@ -122,11 +174,18 @@ if __name__ == '__main__':
                     [3, 5, 9]])
     print(pct_change_np(arr))
     # Sample usage:
-    ewm = EWMAcc(halflife=.5)
-    chunk1 = np.array([1, 2, 3])
+    ewm = EWMAcc(halflife=.5, n_cols=2)
+    arr = np.random.random((10, 2))
+    print(arr)
+    chunk1 = arr[:5, :]
     result1 = ewm.apply_chunk(chunk1)
     print(result1)
 
-    chunk2 = np.array([4, 5, 6])
+    chunk2 = arr[5:, :]
     result2 = ewm.apply_chunk(chunk2)
     print(result2)
+
+    test_strings = ["2h15m", "1D24h", "2W14D", "75m1h15m", "2 h 15 m"]
+    print([parse_duration_string(ts) for ts in test_strings])
+    unit = "min"
+    print([calculate_interval_ratio(ts, unit) for ts in test_strings])
