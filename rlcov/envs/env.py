@@ -13,6 +13,7 @@ class TradingEnv(gym.Env):
         self.num_assets = open_prices.shape[1]
         self.current_step = 0
         self.shared_cash = self.init_cash
+        self.weights_trace = []
         self.exec_states = [vbt.pf_enums.ExecState(
             cash=np.float64(0.0),
             position=0.0,
@@ -33,8 +34,9 @@ class TradingEnv(gym.Env):
             val_price=np.nan,
             value=np.nan
         ) for _ in range(self.num_assets)]
-        self.shared_cash = self.init_cash
+        self.shared_cash = np.float64(self.init_cash)
         self.current_step = 0
+        self.weights_trace = []
         return self.open_prices[self.current_step], {}
 
     def step(self, target_pcts):
@@ -56,7 +58,7 @@ class TradingEnv(gym.Env):
         # make sure we have a non-zero sum, otherwise we can't normalize and we continue, exiting the market
         if not np.isclose(np.sum(target_pcts), 0.0):
             target_pcts = target_pcts / np.sum(target_pcts)  # enforce these are valid
-
+        self.weights_trace.append(target_pcts)
         if self.current_step >= len(self.close_prices) - 1:
             raise ValueError("Simulation has reached the end of the data.")
         starting_portfolio_value = self.portfolio_value.copy()

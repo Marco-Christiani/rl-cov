@@ -1,4 +1,3 @@
-import pprint
 from pprint import pformat
 
 import hydra
@@ -13,9 +12,9 @@ from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
 from ray.tune.logger import pretty_print
-from ray.tune.registry import register_env
 
 from rlcov import utils
+from rlcov.envs import get_wrapped_env
 
 context = ray.init(include_dashboard=True, dashboard_host='0.0.0.0')
 
@@ -40,11 +39,9 @@ class CustomCallbacks(DefaultCallbacks):
                 episode.custom_metrics[key] = last_info[key]
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs):
-        logger.info(f"type(base_env): {type(base_env)}")
         env = base_env.get_sub_environments()[episode.env_id]
         if isinstance(env, FlattenObservation):
             env = env.env
-        logger.info(f"type(env): {type(env)}")
         agents = episode.get_agents()
         agent_id = agents[0]
         last_info = episode.last_info_for(agent_id)
@@ -57,15 +54,20 @@ class CustomCallbacks(DefaultCallbacks):
         n = len(position_pct)
 
         metrics_to_log = {
-            "final_shared_cash": last_info.get("shared_cash", None),
-            "final_hhi": (n * (position_pct ** 2).sum() - 1) / (n - 1),  # Normalized Herfindahl–Hirschman Index
-            "final_portfolio_value": final_value,
-            "final_total_return": total_return,
-            "total_return": total_return
+            f'final_{k}': v
+            for k, v in last_info.items()
+            if isinstance(v, (int, float, str, np.number))
         }
+        # Normalized Herfindahl–Hirschman Index
+        metrics_to_log["final_hhi"] = (n * (position_pct ** 2).sum() - 1) / (n - 1)
+        metrics_to_log["final_total_return"] = total_return
+
         formatted_metrics = pformat(metrics_to_log, indent=4)
         logger.info(formatted_metrics)
-        episode.custom_metrics = {**episode.custom_metrics, **metrics_to_log}
+        print(pformat(dict(last_info.items())))
+
+        for k, v in metrics_to_log.items():
+            episode.custom_metrics[k] = v
 
 
 @hydra.main(config_name="config", config_path="conf")
@@ -88,25 +90,16 @@ def main(config: DictConfig):
         msg += f'\n{close_df[close_df <= 0]}'
         raise ValueError(msg)
 
-    if config.env_config.env == 'RayTradingEnv':
-        from rlcov import rayenv
-        env_cls = rayenv.RayTradingEnv
-    elif config.env_config.env == 'ShrinkEnv':
-        from rlcov import shrinkenv
-        env_cls = shrinkenv.ShrinkEnv
-    else:
-        raise ValueError(f'Unknown env: {config.env_config.env}')
-
     model_config = OmegaConf.to_container(config.model_config)
     env_config = {
         'open_prices': close_df.values,
         'close_prices': close_df.values,
+        'timestamps': close_df.index,
         **OmegaConf.to_container(config.env_config)
     }
-
     if config.smoke_test:
         logger.info('Smoke testing env')
-        env = env_cls(env_config)
+        env = get_wrapped_env(config.env_config.env)(env_config=env_config)
         logger.info('resetting env')
         obs, *_ = env.reset()
         logger.info(f'obs.shape: {obs.shape}')
@@ -115,24 +108,21 @@ def main(config: DictConfig):
         logger.info('done smoke testing env')
         return
 
-    def env_creator(env_config):
-        return FlattenObservation(env_cls(env_config))
-
-    register_env(env_cls.__name__, env_creator)
-
     algo = (
         PPOConfig()
-        .callbacks(CustomCallbacks)
+        .callbacks(CustomCallbacks).exploration()
         .training(gamma=0.99, lr=0.0005, clip_param=0.2, model=model_config)
         .resources(num_gpus=1)
         .rollouts(num_envs_per_worker=4)
-        .environment(env=env_cls.__name__, env_config=env_config)
+        .environment(env=config.env_config.env, env_config=env_config)
     ).build()
 
     logger.info('Training')
-    for i in range(1000):
+    for _ in range(100):
         result = algo.train()
         logger.info(pretty_print(result))
+    # save_path = algo.save('models')
+    # logger.info(f'saved model to {save_path}')
 
 
 if __name__ == '__main__':

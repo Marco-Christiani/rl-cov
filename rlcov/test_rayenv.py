@@ -2,7 +2,7 @@ import pandas as pd
 from icecream import ic
 import pytest
 
-from . import rayenv
+from .envs import rayenv
 from . import utils
 
 
