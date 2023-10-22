@@ -13,6 +13,12 @@ RL for covariance shrinkage factor estimation.
 - spock configs
 - integrate the time utils for mixed unit handling that I wrote
 
+## Notes
+
+### Metrics
+
+- [ ] Concentration ratio
+- [x] Normalized Herfindahl index
 
 ## Log
 
