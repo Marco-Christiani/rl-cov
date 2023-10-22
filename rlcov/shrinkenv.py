@@ -49,9 +49,9 @@ class ShrinkEnv(RayTradingEnv):
             kelly=False,
             rf=0.0
         )
-        obs, reward, done, info = super().step(weights)
-        return obs, reward, done, info
+        obs, reward, done, truncated, info = super().step(weights)
+        return obs, reward, done, truncated, info
 
-    def reset(self, seed=None):
+    def reset(self, *args, **kwargs):
         self.ewm_acc.reset()
-        return super().reset(seed)
+        return super().reset(*args, **kwargs)

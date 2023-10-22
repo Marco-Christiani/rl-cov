@@ -23,7 +23,7 @@ class TradingEnv(gym.Env):
             value=np.nan
         ) for _ in range(self.num_assets)]
 
-    def reset(self, **kwargs):
+    def reset(self, *args, **kwargs):
         self.exec_states = [vbt.pf_enums.ExecState(
             cash=float(0.0),
             position=0.0,
@@ -53,6 +53,7 @@ class TradingEnv(gym.Env):
              i.e. the percentage change in portfolio value from beginning of the step to the end, using next open price
             Time between steps is determined by the data provided, hence limited by its frequency.
         """
+        target_pcts = target_pcts / np.sum(target_pcts)  # enforce these are valid
         if self.current_step >= len(self.close_prices) - 1:
             raise ValueError("Simulation has reached the end of the data.")
         starting_portfolio_value = self.portfolio_value.copy()
@@ -82,7 +83,8 @@ class TradingEnv(gym.Env):
             cash=self.shared_cash,
         )
         done = self.current_step >= len(self.close_prices) - 1
-        return self.open_prices[self.current_step], reward, done, info
+        truncated = False
+        return self.open_prices[self.current_step], reward, done, truncated, info
 
     def _execute_order(self, asset_idx, target_pct):
         self.exec_states[asset_idx] = vbt.pf_enums.ExecState(
@@ -153,7 +155,6 @@ if __name__ == '__main__':
     for weights in weight_list:
         obs, reward, done, info = simulator.step(weights)
         ic(obs, reward, done, info)
-
 
     # Prices for backtesting (using closing prices)
     # prices = df['close'].unstack(level='symbol')
