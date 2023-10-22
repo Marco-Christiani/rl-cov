@@ -10,7 +10,8 @@ RL for covariance shrinkage factor estimation.
   - This gives us access to larger obs space
     - Could calculate a returns series to calculate better rewards
 - Using default ray model which is fine for testing but need to implement multi head model one env is done.
-
+- spock configs
+- integrate the time utils for mixed unit handling that I wrote
 
 
 ## Log
