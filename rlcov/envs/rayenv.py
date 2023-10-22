@@ -62,7 +62,7 @@ class RayTradingEnv(TradingEnv, gym.Env):
         assert self.observation_space.contains(obs)
         if done:
             pf = self.backtest_from_orders()
-            info.update(pf.stats)
+            info.update(pf.stats())
             reward += pf.sharpe_ratio
         return obs, reward, done, truncated, info
 
@@ -144,6 +144,7 @@ if __name__ == '__main__':
     cfg = {
         'open_prices': df['open'].values,
         'close_prices': df['close'].values,
+        'timestamps': df.index,
         'data_freq': 1,
         'freq_unit': 'd',
         'init_cash': 100_000,
@@ -155,3 +156,7 @@ if __name__ == '__main__':
     sim = RayTradingEnv(config=cfg)
     print(sim.reset())
     print(sim.step([0.5, 0.5]))
+    print(sim.step([0.5, 0.5]))
+    print(sim.step([0.5, 0.5]))
+    print(sim.weights_trace)
+    print(sim.backtest_from_orders())
