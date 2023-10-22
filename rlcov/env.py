@@ -35,7 +35,7 @@ class TradingEnv(gym.Env):
         ) for _ in range(self.num_assets)]
         self.shared_cash = self.init_cash
         self.current_step = 0
-        return self.open_prices[self.current_step]
+        return self.open_prices[self.current_step], {}
 
     def step(self, target_pcts):
         """Perform one rebalance step, time between steps is determined by the data provided.
@@ -174,6 +174,7 @@ if __name__ == '__main__':
         fixed_fees=0,
         slippage=0  # costs
     )
+
     # print(portfolio.asset_flow())
     # print(portfolio.cash_flow())
     ic(portfolio.get_asset_value(group_by=False))
