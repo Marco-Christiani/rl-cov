@@ -124,5 +124,5 @@ def opt_weights(returns: pd.DataFrame,
         # sort the columns back to the original order
         w = w[col_order]
         w = w.T
-        w = np.ravel(w.to_numpy())
+    w = np.ravel(w.to_numpy())
     return w

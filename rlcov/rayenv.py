@@ -1,6 +1,5 @@
 import gymnasium as gym
 import numpy as np
-from icecream import ic
 
 from rlcov.env import TradingEnv
 
@@ -42,7 +41,6 @@ class RayTradingEnv(TradingEnv, gym.Env):
         The wrapped sim essentially steps the sim forward by one rebalance period, we fill in the gaps
         with intermediate prices.
         """
-        actions = actions/np.sum(actions)
         # get the indices before we step
         start_price_idx = self.offset + (self.current_step * self.rebalance_freq) + 1
         end_price_idx = self.offset + (self.current_step + 1) * self.rebalance_freq

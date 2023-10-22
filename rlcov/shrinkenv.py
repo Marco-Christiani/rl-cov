@@ -5,9 +5,9 @@ import pandas as pd
 from sklearn.covariance import LedoitWolf
 from statsmodels.stats.correlation_tools import cov_nearest
 
-from . import cov
-from . import utils
-from .rayenv import RayTradingEnv
+from rlcov import cov
+from rlcov import utils
+from rlcov.rayenv import RayTradingEnv
 
 
 class ShrinkEnv(RayTradingEnv):
@@ -44,7 +44,7 @@ class ShrinkEnv(RayTradingEnv):
             cov_matrix = cov_nearest(cov_matrix, method='clipped')
         # TODO: need to fork this library or reimplement, it should not have to be a df for my use case.
         returns_df = pd.DataFrame(returns, columns=self.tickers)
-        weights = cov.opt_weights(
+        weights_df = cov.opt_weights(
             returns=returns_df,
             mu=mu[-1],
             cov=cov_matrix,
@@ -55,7 +55,8 @@ class ShrinkEnv(RayTradingEnv):
             kelly=False,
             rf=0.0
         )
-        obs, reward, done, truncated, info = super().step(weights)
+        obs, reward, done, truncated, info = super().step(weights_df)
+        assert self.observation_space.contains(obs)
         return obs, reward, done, truncated, info
 
     def reset(self, *args, **kwargs):

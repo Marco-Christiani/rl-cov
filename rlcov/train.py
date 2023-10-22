@@ -1,18 +1,25 @@
+import pprint
+from pprint import pformat
+
+import hydra
+import numpy as np
 import pandas as pd
 import ray
+from gymnasium.wrappers import FlattenObservation
+from omegaconf import DictConfig
 from omegaconf import OmegaConf
 from ray import logger
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
 from ray.tune.logger import pretty_print
+from ray.tune.registry import register_env
 
-from . import utils
+from rlcov import utils
 
 context = ray.init(include_dashboard=True, dashboard_host='0.0.0.0')
 
-from ray.rllib.algorithms.callbacks import DefaultCallbacks
-
-from pprint import pformat
+OmegaConf.register_new_resolver("eval", lambda s: eval(s))
 
 
 class CustomCallbacks(DefaultCallbacks):
@@ -31,7 +38,6 @@ class CustomCallbacks(DefaultCallbacks):
         for key in keys_to_log:
             if key in last_info:
                 episode.custom_metrics[key] = last_info[key]
-                logger.info(f"{key}: {last_info[key]}")
 
     def on_episode_end(self, worker, base_env, policies, episode, **kwargs):
         logger.info(f"type(base_env): {type(base_env)}")
@@ -62,35 +68,14 @@ class CustomCallbacks(DefaultCallbacks):
         episode.custom_metrics = {**episode.custom_metrics, **metrics_to_log}
 
 
-from ray.tune.registry import register_env
-from gymnasium.wrappers import FlattenObservation
-
-
-def main():
-    config = OmegaConf.create({
-        "tickers": [
-            'ADAUSD',
-            'BTCUSD',
-            'CRVUSD',
-            'ETHUSD',
-            'FTTUSD',
-            'LTCUSD',
-            'XRPUSD',
-        ],
-        "env": "ShrinkEnv",
-        "start_date": '2021-01-01',
-        "end_date": '2023-01-01',
-        "warmup": 24 * 7 * 4,
-        "rebalance_freq": 24 * 7,
-        "data_freq": 1,
-        "freq_unit": "h",
-        "init_cash": 100_000,
-        "txn_cost": 1e-3,
-    })
-
-    data = utils.load_local_data(list(config.tickers), config.start_date, config.end_date,
-                                 freq=f'{config.data_freq}{config.freq_unit}')
-    close_df = pd.DataFrame({sym: data[sym].close for sym in list(config.tickers)})
+@hydra.main(config_name="config", config_path="conf")
+def main(config: DictConfig):
+    OmegaConf.resolve(config)
+    logger.info(f"config: {OmegaConf.to_yaml(config)}")
+    data = utils.load_local_data(list(config.env_config.tickers), config.env_config.start_date,
+                                 config.env_config.end_date,
+                                 freq=f'{config.env_config.data_freq}{config.env_config.freq_unit}')
+    close_df = pd.DataFrame({sym: data[sym].close for sym in list(config.env_config.tickers)})
 
     if close_df.isna().any().any():
         msg = 'Close prices contain NaNs'
@@ -103,34 +88,38 @@ def main():
         msg += f'\n{close_df[close_df <= 0]}'
         raise ValueError(msg)
 
-    if config.env == 'RayTradingEnv':
-        from . import rayenv
+    if config.env_config.env == 'RayTradingEnv':
+        from rlcov import rayenv
         env_cls = rayenv.RayTradingEnv
-    elif config.env == 'ShrinkEnv':
-        from . import shrinkenv
+    elif config.env_config.env == 'ShrinkEnv':
+        from rlcov import shrinkenv
         env_cls = shrinkenv.ShrinkEnv
     else:
-        raise ValueError(f'Unknown env: {config.env}')
+        raise ValueError(f'Unknown env: {config.env_config.env}')
+
+    model_config = OmegaConf.to_container(config.model_config)
+    env_config = {
+        'open_prices': close_df.values,
+        'close_prices': close_df.values,
+        **OmegaConf.to_container(config.env_config)
+    }
+
+    if config.smoke_test:
+        logger.info('Smoke testing env')
+        env = env_cls(env_config)
+        logger.info('resetting env')
+        obs, *_ = env.reset()
+        logger.info(f'obs.shape: {obs.shape}')
+        logger.info('stepping env')
+        obs, *_ = env.step(np.array([1.0] * env.num_assets) / env.num_assets)
+        logger.info('done smoke testing env')
+        return
 
     def env_creator(env_config):
         return FlattenObservation(env_cls(env_config))
 
     register_env(env_cls.__name__, env_creator)
 
-    model_config = {
-        "use_transformer": False,
-        "use_lstm": True,
-        "lstm_cell_size": 256,
-        "lstm_use_prev_action": False,
-        "lstm_use_prev_reward": False,
-        # "max_seq_len": config['rebalance_freq'],
-        "fcnet_hiddens": [256, 256]
-    }
-    env_config = {
-        'open_prices': close_df.values,
-        'close_prices': close_df.values,
-        **config
-    }
     algo = (
         PPOConfig()
         .callbacks(CustomCallbacks)
@@ -140,11 +129,10 @@ def main():
         .environment(env=env_cls.__name__, env_config=env_config)
     ).build()
 
-    print('Training')
+    logger.info('Training')
     for i in range(1000):
         result = algo.train()
-        print(pretty_print(result))
-    print('done')
+        logger.info(pretty_print(result))
 
 
 if __name__ == '__main__':

@@ -1,0 +1,28 @@
+env_config:
+  tickers:
+    - ADAUSD
+    - BTCUSD
+    - CRVUSD
+    - ETHUSD
+    - FTTUSD
+    - LTCUSD
+    - XRPUSD
+  env: ShrinkEnv
+  start_date: '2021-01-01'
+  end_date: '2023-01-01'
+  warmup: '${eval: 24*7}'
+  rebalance_freq: '${eval: 24*7}'
+  data_freq: 1
+  freq_unit: h
+  init_cash: 100000
+  txn_cost: 0.001
+model_config:
+  use_attention: false
+  use_lstm: true
+  lstm_cell_size: 256
+  lstm_use_prev_action: false
+  lstm_use_prev_reward: false
+  fcnet_hiddens:
+    - 256
+    - 256
+smoke_test: false
