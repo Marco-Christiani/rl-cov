@@ -96,7 +96,21 @@ def main():
     stock_returns.dropna(inplace=True)
     print(stock_returns.head())
     print(stock_returns.shape)
-    animation(config, stock_returns)
+    # animation(config, stock_returns)
+    # testing
+    cov = LedoitWolf().fit(stock_returns.iloc[:100, :2]).covariance_
+    cov = pd.DataFrame(np.array(cov, ndmin=2), columns=stock_returns.columns[:2], index=stock_returns.columns[:2])
+    print(cov)
+    from sklearn.covariance._shrunk_covariance import shrunk_covariance
+    temp = pd.DataFrame(shrunk_covariance(cov, shrinkage=0.1), columns=stock_returns.columns[:2], index=stock_returns.columns[:2])
+    print(temp)
+    temp = pd.DataFrame(shrink(cov.values, factor=0.1), columns=stock_returns.columns[:2], index=stock_returns.columns[:2])
+    print(temp)
+    import riskfolio as rp
+    rpp = rp.Portfolio(returns=stock_returns.iloc[:100, :2])
+    rpp.assets_stats(method_mu='hist', method_cov='ledoit')
+    print(rpp.cov)
+    print(rpp.mu)
 
 
 if __name__ == '__main__':
