@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
-from env import TradingEnv
+from .env import TradingEnv
 
 
 class RayTradingEnv(TradingEnv, gym.Env):
@@ -30,7 +30,7 @@ class RayTradingEnv(TradingEnv, gym.Env):
         self.observation_space = gym.spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(self.num_assets,),
+            shape=(self.num_assets, self.rebalance_freq),
             dtype=np.float32
         )
 
@@ -40,6 +40,7 @@ class RayTradingEnv(TradingEnv, gym.Env):
         The wrapped sim essentially steps the sim forward by one rebalance period, we fill in the gaps
         with intermediate prices.
         """
+        # get the indices before we step
         start_price_idx = self.offset + (self.current_step * self.rebalance_freq) + 1
         end_price_idx = self.offset + (self.current_step + 1) * self.rebalance_freq
         # simulate one rebalance period
@@ -57,3 +58,14 @@ class RayTradingEnv(TradingEnv, gym.Env):
         obs = self.all_open_prices[:self.offset+1]
         # if our math is correct our last price of obs be the first open price of the first rebalance period
         assert np.equal(obs[-1], first_open).all()
+
+    def _current_obs_window(self):
+        return self.all_open_prices[self._current_obs_window_start_idx:self._current_obs_window_end_idx + 1]
+
+    @property
+    def _current_obs_window_start_idx(self):
+        return self.offset + (self.current_step * self.rebalance_freq) + 1
+
+    @property
+    def _current_obs_window_end_idx(self):
+        return self.offset + (self.current_step + 1) * self.rebalance_freq
