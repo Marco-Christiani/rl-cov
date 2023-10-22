@@ -3,6 +3,7 @@ from enum import Enum
 from functools import wraps
 
 import numpy as np
+import pandas as pd
 import riskfolio as rp
 
 
@@ -41,17 +42,28 @@ def ignore_warnings(f):
     return inner
 
 
-def opt_weights(returns, *, mu: np.ndarray, cov, model, obj_func, rm, l: float = 2, kelly: bool = False, rf: float = 0.0):
+def opt_weights(returns: pd.DataFrame,
+                *,
+                mu: np.ndarray,
+                cov: np.ndarray,
+                model: str,
+                obj_func: str,
+                risk_metric,
+                risk_aversion_factor: float = 2,
+                kelly: bool = False,
+                rf: float = 0.0,
+                on_unsolvable: np.ndarray | str = 'zeros',
+                ):
     """
     returns: pd.DataFrame
         Returns, columns are assets
-    rm: str
+    risk_metric: str
         Risk Measure
     model: str
         Classic (historical), BL (Black Litterman) or FM (Factor Model)
     obj_func: str
         MinRisk, MaxRet, Utility, ERC, or Sharpe
-    l: float/int
+    risk_aversion_factor: float/int
         Risk aversion factor when obj_func="Utility"
     kelly: Union[str, bool]
         Method used to calculate mean return.
@@ -61,53 +73,56 @@ def opt_weights(returns, *, mu: np.ndarray, cov, model, obj_func, rm, l: float =
     rf: float
         Risk free rate
     """
-    # Sort to ensure correct ordering later
-    if list(returns.columns) != list(sorted(returns.columns)):
-        raise Exception('Must sort df columns!')
-
+    if not isinstance(returns, pd.DataFrame):
+        raise ValueError('Must be a dataframe')
     port = rp.Portfolio(returns=returns)
     port.mu = mu
     port.cov = cov
 
-    # Estimate optimal weights
-    # port.solvers = ["MOSEK"]
-    # port.solvers = ["CVXPY"]
-
-    if obj_func == 'ERC':
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        if obj_func == 'ERC':
             w = port.rp_optimization(
                 model=model,
-                rm=rm,
+                rm=risk_metric,
                 rf=rf,
                 b=None,  # Constraints (None defaults to 1/n)
                 hist=True,  # Use historical for risk measures
             )
-    else:
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
+        else:
             w = port.optimization(
                 model=model,
-                rm=rm,
+                rm=risk_metric,
                 obj=obj_func,
                 rf=rf,
-                l=l,
+                l=risk_aversion_factor,
                 hist=True,  # Use historical for risk measures
                 kelly=kelly,
             )
     if w is None:
-        warnings.warn('No solution found. Returning zeros.')
-        return np.repeat(0, returns.shape[1])
-    if len(w) != len(returns.shape[1]):
-        warnings.warn(
-            f'There were NA values in the weights, replacing with zero.'
-            f' len(w)={len(w)}, len(close.columns)={len(returns.columns)}')
+        if on_unsolvable == 'zeros':
+            warnings.warn('No solution found. Returning zeros according to on_unsolvable="zeros"')
+            return np.repeat(0, returns.shape[1])
+        # equal weights
+        elif on_unsolvable == 'ew':
+            warnings.warn('No solution found. Returning equal weights according to on_unsolvable="ew"')
+            return np.repeat(1 / returns.shape[1], returns.shape[1])
+        elif on_unsolvable == np.ndarray:
+            warnings.warn('No solution found. Returning on_unsolvable ndarray')
+            return on_unsolvable
+    if len(w) != returns.shape[1]:
+        warnings.warn('Solution does not match number of assets. Trying to fix by inserting zeros.')
+        # will have to sort to ensure correct ordering when we insert zeros
+        col_order = returns.columns
+        # sort the columns
+        returns = returns[sorted(returns.columns)]
         # Insert the assets that contained NA values back into the weights as 0
         w = w.T
         w = w[sorted(w.columns)]  # Sort to ensure correct ordering
         na_cols = w.columns.symmetric_difference(returns.columns)
         w[na_cols] = [0] * len(na_cols)
-        w = w[sorted(w.columns)]  # Sort to ensure correct ordering
+        # sort the columns back to the original order
+        w = w[col_order]
         w = w.T
         w = np.ravel(w.to_numpy())
     return w
