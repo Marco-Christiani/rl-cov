@@ -19,12 +19,11 @@ def shrink(
 ) -> np.ndarray:
     """Shrinks a covariance matrix towards a ShrinkageTarget."""
     n = cov_matrix.shape[0]
+    shrunk_cov = (1.0 - factor) * cov_matrix
     if shrinkage_target == ShrinkageTarget.Identity:
-        shrunk_cov = (1.0 - factor) * cov_matrix
         shrunk_cov.flat[:: n + 1] += factor / n
         return shrunk_cov
     elif shrinkage_target == ShrinkageTarget.MeanVar:
-        shrunk_cov = (1.0 - factor) * cov_matrix
         shrunk_cov.flat[:: n + 1] += factor * np.trace(cov_matrix) / n
         return shrunk_cov
     else:
@@ -126,3 +125,15 @@ def opt_weights(returns: pd.DataFrame,
         w = w.T
     w = np.ravel(w.to_numpy())
     return w
+
+
+if __name__ == '__main__':
+    # demonstrate the shrink function
+    cov_matrix = np.array([
+        [1, 0.5, 0.3],
+        [0.5, .9, 0.1],
+        [0.3, 0.1, 1]
+    ])
+    print(cov_matrix)
+    print(shrink(cov_matrix, shrinkage_target=ShrinkageTarget.Identity, factor=0.1))
+    print(shrink(cov_matrix, shrinkage_target=ShrinkageTarget.MeanVar, factor=0.1))

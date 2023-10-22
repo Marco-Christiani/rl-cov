@@ -16,6 +16,8 @@ env_config:
   freq_unit: h
   init_cash: 100000
   txn_cost: 0.001
+  mu_method: hist
+  shrinkage_target: Identity
 model_config:
   use_attention: false
   use_lstm: true
