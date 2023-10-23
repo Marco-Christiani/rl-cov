@@ -1,15 +1,25 @@
 RL for covariance shrinkage factor estimation.
 
+[(Mattera 2023) Shrinkage estimation with reinforcement learning of large variance matrices for portfolio selection](https://doi.org/10.1016/j.iswa.2023.200181)
+
+[(Wu et al. 2021) Portfolio management system in equity market neutral using reinforcement learning](https://doi.org/10.1007/s10489-021-02262-0)
+
+[(Lu et al. 2022) Improved Estimation of the Covariance Matrix using Reinforcement Learning](https://dx.doi.org/10.2139/ssrn.4081502)
+
+
+
 ## Tasks
 
-- Currently have an environment, but it only uses the reweight prices, not all the prices in between
-  - This is good for sim speed but the obs space is too small
-  - Plan is to wrap this environment:
-    - Wrapper contains all prices
-    - Calls wrapped sim, passing only the prices for reweight periods
-  - This gives us access to larger obs space
-    - Could calculate a returns series to calculate better rewards
-- Using default ray model which is fine for testing but need to implement multi head model one env is done.
+- Currently have an environment, but it only uses the reweight prices, not all
+  the prices in between
+    - This is good for sim speed but the obs space is too small
+    - Plan is to wrap this environment:
+        - Wrapper contains all prices
+        - Calls wrapped sim, passing only the prices for reweight periods
+    - This gives us access to larger obs space
+        - Could calculate a returns series to calculate better rewards
+- Using default ray model which is fine for testing but need to implement multi
+  head model one env is done.
 - spock configs
 - integrate the time utils for mixed unit handling that I wrote
 
@@ -29,13 +39,13 @@ I just have to wrap an existing env:
 - Get new portfolio weights
 - Pass as actions to super().step() method
 
-
 FinRL [env_portfolio.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_portfolio_allocation/env_portfolio.py)
 
 Has problems:
 
 - transaction cost not used
-- I would have to modify the existing env, it expects the output of an RL policy network so its doing softmax normalization etc.
+- I would have to modify the existing env, it expects the output of an RL policy
+  network so its doing softmax normalization etc.
 
 Reference portfolio envs:
 

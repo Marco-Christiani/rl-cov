@@ -92,7 +92,7 @@ def main(config: DictConfig):
 
     model_config = OmegaConf.to_container(config.model_config)
     env_config = {
-        'open_prices': close_df.values,
+        'open_prices': close_df.values,  # use close for both for now
         'close_prices': close_df.values,
         'timestamps': close_df.index,
         **OmegaConf.to_container(config.env_config)
