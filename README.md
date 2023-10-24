@@ -25,6 +25,13 @@ RL for covariance shrinkage factor estimation.
 
 ## Notes
 
+## Targeted Journals
+
+- Journal of Empirical Finance
+- Quantitative Finance
+- The Journal of Finance and Data Science
+- We can also consider AI journals, e.g., 'Expert Systems with Applications'.
+
 ### Metrics
 
 - [ ] Concentration ratio
