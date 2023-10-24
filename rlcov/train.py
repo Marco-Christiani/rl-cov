@@ -118,11 +118,11 @@ def main(config: DictConfig):
     ).build()
 
     logger.info('Training')
-    for _ in range(100):
+    for _ in range(5):
         result = algo.train()
         logger.info(pretty_print(result))
-    # save_path = algo.save('models')
-    # logger.info(f'saved model to {save_path}')
+    save_path = algo.save('models')
+    logger.info(f'saved model to {save_path}')
 
 
 if __name__ == '__main__':
