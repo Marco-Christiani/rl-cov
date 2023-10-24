@@ -15,22 +15,22 @@ class TradingEnv(gym.Env):
         self.shared_cash = self.init_cash
         self.weights_trace = [np.zeros(self.num_assets, dtype=np.float64)]
         self.exec_states = [vbt.pf_enums.ExecState(
-            cash=np.float64(0.0),
+            cash=np.float64(self.init_cash),
             position=0.0,
             debt=0.0,
             locked_cash=0.0,
-            free_cash=0.0,
+            free_cash=np.float64(self.init_cash),
             val_price=np.nan,
             value=np.nan
         ) for _ in range(self.num_assets)]
 
     def reset(self, *args, **kwargs):
         self.exec_states = [vbt.pf_enums.ExecState(
-            cash=np.float64(0.0),
+            cash=np.float64(self.init_cash),
             position=0.0,
             debt=0.0,
             locked_cash=0.0,
-            free_cash=0.0,
+            free_cash=np.float64(self.init_cash),
             val_price=np.nan,
             value=np.nan
         ) for _ in range(self.num_assets)]
@@ -67,12 +67,12 @@ class TradingEnv(gym.Env):
         # Execute sell orders first
         for i in range(self.num_assets):
             if not np.isnan(target_pcts[i]) and self.position_values[i] > target_values[i]:
-                self._execute_order(i, target_pcts[i])
+                self._execute_order(i, target_pcts[i], starting_portfolio_value)
 
         # Execute buy orders
         for i in range(self.num_assets):
             if not np.isnan(target_pcts[i]) and self.position_values[i] < target_values[i]:
-                self._execute_order(i, target_pcts[i])
+                self._execute_order(i, target_pcts[i], starting_portfolio_value)
 
         end_portfolio_value = self.portfolio_value.copy()
         self.current_step += 1
@@ -92,7 +92,7 @@ class TradingEnv(gym.Env):
         truncated = False
         return self.open_prices[self.current_step], reward, done, truncated, info
 
-    def _execute_order(self, asset_idx, target_pct):
+    def _execute_order(self, asset_idx, target_pct, portfolio_value):
         self.exec_states[asset_idx] = vbt.pf_enums.ExecState(
             cash=self.shared_cash,
             position=self.exec_states[asset_idx].position,
@@ -100,7 +100,7 @@ class TradingEnv(gym.Env):
             locked_cash=self.exec_states[asset_idx].locked_cash,
             free_cash=self.shared_cash,
             val_price=self.open_prices[self.current_step, asset_idx],
-            value=self.portfolio_value
+            value=portfolio_value
         )
         order = vbt.pf_nb.order_nb(
             size=target_pct,
