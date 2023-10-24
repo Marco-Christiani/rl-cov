@@ -27,6 +27,7 @@ RL for covariance shrinkage factor estimation.
 
 ## Targeted Journals
 
+- Journal of Financial and Quantitative Analysis
 - Journal of Empirical Finance
 - Quantitative Finance
 - The Journal of Finance and Data Science
