@@ -109,9 +109,10 @@ class RayTradingEnv(TradingEnv, gym.Env):
         weights = pd.DataFrame(self.weights_trace, index=reweight_dates,
                                columns=self.tickers)
         # the simulation ends at the last rebalance date, need to slice until last rebalance date, inclusive
+        # also, we do not enter the market until the first reweight so dont skew the benchmark
         freq = pd.Timedelta(f'{self.data_freq}{self.freq_unit}')
-        opens = opens.loc[:reweight_dates[-1]+freq]
-        closes = closes.loc[:reweight_dates[-1]+freq]
+        opens = opens.loc[reweight_dates[0]:reweight_dates[-1]+freq]
+        closes = closes.loc[reweight_dates[0]:reweight_dates[-1]+freq]
 
         return vbt.Portfolio.from_orders(
             open=opens,

@@ -2,7 +2,6 @@ from pprint import pformat
 
 import hydra
 import numpy as np
-import pandas as pd
 import ray
 from gymnasium.wrappers import FlattenObservation
 from omegaconf import DictConfig
@@ -13,12 +12,11 @@ from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
 from ray.tune.logger import pretty_print
 
-from rlcov import utils
 from rlcov.envs import get_wrapped_env
+from rlcov.utils import load_close_from_config
 
 context = ray.init(include_dashboard=True, dashboard_host='0.0.0.0')
 
-OmegaConf.register_new_resolver("eval", lambda s: eval(s))
 
 
 class CustomCallbacks(DefaultCallbacks):
@@ -74,10 +72,8 @@ class CustomCallbacks(DefaultCallbacks):
 def main(config: DictConfig):
     OmegaConf.resolve(config)
     logger.info(f"config: {OmegaConf.to_yaml(config)}")
-    data = utils.load_local_data(list(config.env_config.tickers), config.env_config.start_date,
-                                 config.env_config.end_date,
-                                 freq=f'{config.env_config.data_freq}{config.env_config.freq_unit}')
-    close_df = pd.DataFrame({sym: data[sym].close for sym in list(config.env_config.tickers)})
+    close_df = load_close_from_config(config)
+    logger.info(f'close_df.shape: {close_df.shape}')
 
     if close_df.isna().any().any():
         msg = 'Close prices contain NaNs'
@@ -110,7 +106,7 @@ def main(config: DictConfig):
 
     algo = (
         PPOConfig()
-        .callbacks(CustomCallbacks).exploration()
+        .callbacks(CustomCallbacks)
         .training(gamma=0.99, lr=0.0005, clip_param=0.2, model=model_config)
         .resources(num_gpus=1)
         .rollouts(num_envs_per_worker=4)
@@ -118,11 +114,14 @@ def main(config: DictConfig):
     ).build()
 
     logger.info('Training')
-    for _ in range(5):
+    for _ in range(config.training_iterations):
         result = algo.train()
         logger.info(pretty_print(result))
+    # algo.export_policy_model
     save_path = algo.save('models')
     logger.info(f'saved model to {save_path}')
+
+
 
 
 if __name__ == '__main__':
