@@ -4,6 +4,7 @@ import re
 import numpy as np
 import pandas as pd
 import yfinance as yf
+from omegaconf import DictConfig
 from scipy import linalg
 from vectorbtpro.generic.enums import EWMMeanAIS
 from vectorbtpro.generic.nb.rolling import ewm_mean_acc_nb
@@ -189,3 +190,12 @@ if __name__ == '__main__':
     print([parse_duration_string(ts) for ts in test_strings])
     unit = "min"
     print([calculate_interval_ratio(ts, unit) for ts in test_strings])
+
+
+def load_close_from_config(config: DictConfig):
+    data = load_local_data(list(config.env_config.tickers), config.env_config.start_date,
+                                 config.env_config.end_date,
+                                 freq=f'{config.env_config.data_freq}{config.env_config.freq_unit}')
+    return pd.DataFrame(
+        {sym: data[sym].close for sym in list(config.env_config.tickers)}
+    )

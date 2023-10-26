@@ -13,7 +13,7 @@ class TradingEnv(gym.Env):
         self.num_assets = open_prices.shape[1]
         self.current_step = 0
         self.shared_cash = self.init_cash
-        self.weights_trace = []
+        self.weights_trace = [np.zeros(self.num_assets, dtype=np.float64)]
         self.exec_states = [vbt.pf_enums.ExecState(
             cash=np.float64(self.init_cash),
             position=0.0,
@@ -36,8 +36,7 @@ class TradingEnv(gym.Env):
         ) for _ in range(self.num_assets)]
         self.shared_cash = np.float64(self.init_cash)
         self.current_step = 0
-        # self.weights_trace = [np.zeros(self.num_assets, dtype=np.float64)]
-        self.weights_trace = []
+        self.weights_trace = [np.zeros(self.num_assets, dtype=np.float64)]
         return self.open_prices[self.current_step], {}
 
     def step(self, target_pcts):
@@ -162,7 +161,6 @@ if __name__ == '__main__':
     for weights in weight_list:
         obs, reward, done, truncated, info = simulator.step(weights)
         ic(obs, reward, done, info)
-
     # Prices for backtesting (using closing prices)
     # prices = df['close'].unstack(level='symbol')
     ic(df['close'])
@@ -189,3 +187,4 @@ if __name__ == '__main__':
     ic(portfolio.value)
     # print(portfolio.order_records)
     ic(portfolio.stats())
+

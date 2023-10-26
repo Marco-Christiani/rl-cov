@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import gymnasium as gym
 import numpy as np
 
@@ -17,8 +15,8 @@ class RayTradingEnv(TradingEnv, gym.Env):
         self.data_freq: int = config["data_freq"]  # units of time between data points
         self.freq_unit: str = config["freq_unit"]  # a pandas unit: i.e. T, h, d, etc
         # ensure we have a minimum of one rebalance period (the step size is inclusive of the first value)
-        rebalance_open_prices = self.all_open_prices[self.rebalance_freq-1::config["rebalance_freq"]]
-        rebalance_close_prices = self.all_close_prices[self.rebalance_freq-1::config["rebalance_freq"]]
+        rebalance_open_prices = self.all_open_prices[self.rebalance_freq - 1::self.rebalance_freq]
+        rebalance_close_prices = self.all_close_prices[self.rebalance_freq - 1::self.rebalance_freq]
 
         self.tickers = config.get("tickers", None)
         super().__init__(
@@ -73,8 +71,8 @@ class RayTradingEnv(TradingEnv, gym.Env):
         """Reset the sim, return initial obs."""
         # Calculate the observation window based on offset and rebalance frequency
         # obs = self.all_open_prices[self.offset - self.rebalance_freq + 1: self.offset + 1]
-        obs = self._current_obs_window()
         first_open, _ = super().reset(*args, **kwargs)
+        obs = self._current_obs_window()
 
         # if our math is correct our last price of obs be the first open price of the first rebalance period
         assert np.equal(obs[-1], first_open).all(), f'Got {obs[-1]} expected {first_open}.' \
@@ -102,18 +100,19 @@ class RayTradingEnv(TradingEnv, gym.Env):
     def backtest_from_orders(self):
         import vectorbtpro as vbt
         import pandas as pd
-
+        self.timestamps = pd.to_datetime(self.timestamps)
         # use all prices for simulation
         opens = pd.DataFrame(self.all_open_prices, index=self.timestamps)
         closes = pd.DataFrame(self.all_close_prices, index=self.timestamps)
-        # the simulation ends at the last rebalance date, need to slice until last rebalance date
-        n = len(self.all_open_prices)
-        opens = opens.iloc[:n - n % self.rebalance_freq]
-        closes = closes.iloc[:n - n % self.rebalance_freq]
-
-        reweight_dates = self.timestamps[self.rebalance_freq-1::self.rebalance_freq]
+        reweight_dates = self.timestamps[self.rebalance_freq - 1::self.rebalance_freq]
+        reweight_dates = pd.to_datetime(reweight_dates)
         weights = pd.DataFrame(self.weights_trace, index=reweight_dates,
                                columns=self.tickers)
+        # the simulation ends at the last rebalance date, need to slice until last rebalance date, inclusive
+        freq = pd.Timedelta(f'{self.data_freq}{self.freq_unit}')
+        opens = opens.loc[:reweight_dates[-1]+freq]
+        closes = closes.loc[:reweight_dates[-1]+freq]
+
         return vbt.Portfolio.from_orders(
             open=opens,
             close=closes,
@@ -133,7 +132,42 @@ class RayTradingEnv(TradingEnv, gym.Env):
         )
 
 
+def try_reset():
+    import pandas as pd
+    n = 20
+    close_prices = np.arange(n * 2) + 1
+    open_prices = close_prices  # same for now
+    # build multiindex
+    # need to repeat dates for each symbol
+    ts = np.array([pd.date_range('2023-10-10', periods=n, freq='d')] * 2)
+    ts = ts.flatten()
+    ts.sort()
+    arrays = {
+        'symbol': ['AAPL', 'GOOG'] * n,
+        'timestamp': ts,
+        'open': open_prices,
+        'close': close_prices,
+    }
+    df = pd.DataFrame(arrays)
+    df.set_index(['timestamp', 'symbol'], inplace=True)
+    df = df.unstack(level='symbol')
+    print(df)
+    cfg = {
+        'open_prices': df['close'].values,
+        'close_prices': df['close'].values,
+        'timestamps': df.index,
+        'data_freq': 1,
+        'freq_unit': 'd',
+        'init_cash': 100_000,
+        'txn_cost': 1e-3,
+        'rebalance_freq': 7
+    }
+    sim = RayTradingEnv(config=cfg)
+    print(sim.reset())
+
+
 if __name__ == '__main__':
+    try_reset()
     import pandas as pd
 
     df = pd.DataFrame({
@@ -175,4 +209,3 @@ if __name__ == '__main__':
     pf = sim.backtest_from_orders()
     print(pf.stats())
     print(sim.portfolio_value)
-    pprint(sim.__dict__)
