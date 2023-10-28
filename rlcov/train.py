@@ -1,3 +1,4 @@
+import logging
 from pprint import pformat
 
 import hydra
@@ -6,17 +7,19 @@ import ray
 from gymnasium.wrappers import FlattenObservation
 from omegaconf import DictConfig
 from omegaconf import OmegaConf
-from ray import logger
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
-from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
+from ray.rllib.models import ModelCatalog
 from ray.tune.logger import pretty_print
 
 from rlcov.envs import get_wrapped_env
+from rlcov.models.custom_lstm import SimpleTorchRNNModel
 from rlcov.utils import load_close_from_config
 
+logger = logging.getLogger(__name__)
 context = ray.init(include_dashboard=True, dashboard_host='0.0.0.0')
 
+ModelCatalog.register_custom_model("SimpleTorchRNNModel", SimpleTorchRNNModel)
 
 
 class CustomCallbacks(DefaultCallbacks):
@@ -104,24 +107,43 @@ def main(config: DictConfig):
         logger.info('done smoke testing env')
         return
 
-    algo = (
-        PPOConfig()
+    if config.algorithm.lower() == 'ddpg':
+        from ray.rllib.algorithms.ddpg import DDPGConfig as AlgoConfig
+    elif config.algorithm.lower() == 'ppo':
+        from ray.rllib.algorithms.ppo import PPOConfig as AlgoConfig
+    else:
+        raise ValueError(f'Unknown algorithm: {config.algorithm}')
+
+    algo_config = AlgoConfig()
+
+    enable_learner_api = True
+    if config.use_custom_model:
+        model_config = {
+            "custom_model": config.custom_model_config.name,
+        }
+        enable_learner_api = False
+
+    algo_config = (
+        algo_config
+        .rl_module(_enable_rl_module_api=enable_learner_api)
         .callbacks(CustomCallbacks)
-        .training(gamma=0.99, lr=0.0005, clip_param=0.2, model=model_config)
-        .resources(num_gpus=1)
-        .rollouts(num_envs_per_worker=4)
+        .training(model=model_config, _enable_learner_api=enable_learner_api,
+                  **OmegaConf.to_container(config.training_args))
+        .resources(**OmegaConf.to_container(config.resources_args))
+        .rollouts(**OmegaConf.to_container(config.rollouts_args))
         .environment(env=config.env_config.env, env_config=env_config)
-    ).build()
+    )
+
+    algo = algo_config.build()
 
     logger.info('Training')
-    for _ in range(config.training_iterations):
+    for i in range(1, config.training_iterations + 1):
         result = algo.train()
         logger.info(pretty_print(result))
+        if i % config.checkpoint_freq == 0:
+            checkpoint_path = algo.save('models')
+            logger.info(f'saved model to {checkpoint_path}')
     # algo.export_policy_model
-    save_path = algo.save('models')
-    logger.info(f'saved model to {save_path}')
-
-
 
 
 if __name__ == '__main__':

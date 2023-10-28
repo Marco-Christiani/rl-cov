@@ -1,3 +1,4 @@
+smoke_test: false
 env_config:
   tickers:
     - ADAUSD
@@ -19,7 +20,11 @@ env_config:
   mu_method: hist
   shrinkage_target: Identity
   obs_type: returns # or prices
+use_custom_model: true
+custom_model_config:
+  name: SimpleTorchRNNModel
 model_config:
+  # below does not apply for custom model
   use_attention: false
   use_lstm: true
   lstm_cell_size: 32
@@ -28,5 +33,17 @@ model_config:
   fcnet_hiddens:
     - 64
     - 64
-smoke_test: false
-training_iterations: 20
+training_iterations: 10000
+checkpoint_freq: 100
+algorithm: PPO
+training_args:
+  gamma: 0.98
+  lr: 0.001
+  train_batch_size: 32000
+  sgd_minibatch_size: 4096
+resources_args:
+  num_gpus: 1
+rollouts_args:
+  num_rollout_workers: 32
+  num_envs_per_worker: 8
+
