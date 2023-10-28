@@ -20,8 +20,12 @@ RL for covariance shrinkage factor estimation.
         - Could calculate a returns series to calculate better rewards
 - Using default ray model which is fine for testing but need to implement multi
   head model one env is done.
-- spock configs
 - integrate the time utils for mixed unit handling that I wrote
+- Custom model selects action directly, use DDPG
+  - Rllib default for PPO does odd sampling that is typically out of bounds
+  - **Action space should be symmetric around 0, need to fix this**
+- Implement minimum reweight delta (i.e. change in 1% shouldnt trigger trades)
+- Feature engineering
 
 ## Notes
 
@@ -38,38 +42,10 @@ RL for covariance shrinkage factor estimation.
 - [ ] Concentration ratio
 - [x] Normalized Herfindahl index
 
-## Log
+## Training methodology
 
-I just have to wrap an existing env:
+[Curriculum learning](https://github.com/ray-project/ray/blob/master/rllib/examples/curriculum_learning.py)
 
-- Action space for me is value of shrinkage factor
-- Use shrinkage factor to calculate covariance matrix
-- Get new portfolio weights
-- Pass as actions to super().step() method
+[Evaluation callback](https://github.com/ray-project/ray/blob/master/rllib/examples/parallel_evaluation_and_training.py)
 
-FinRL [env_portfolio.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_portfolio_allocation/env_portfolio.py)
-
-Has problems:
-
-- transaction cost not used
-- I would have to modify the existing env, it expects the output of an RL policy
-  network so its doing softmax normalization etc.
-
-Reference portfolio envs:
-
-- [env_portfolio.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_portfolio_allocation/env_portfolio.py)
-- [env_stocktrading_np.py](https://github.com/AI4Finance-Foundation/FinRL/blob/master/finrl/meta/env_stock_trading/env_stocktrading_np.py)
-
-```
-(RolloutWorker pid=586260) For your custom (single agent) gym.Env classes:                                                                                                                                            │
-(RolloutWorker pid=586260) 3.1) Either wrap your old Env class via the provided `from gymnasium.wrappers import                                                                                                       │
-(RolloutWorker pid=586260)      EnvCompatibility` wrapper class.                                                                                                                                                      │
-(RolloutWorker pid=586260) 3.2) Alternatively to 3.1:                                                                                                                                                                 │
-(RolloutWorker pid=586260)  - Change your `reset()` method to have the call signature 'def reset(self, *,                                                                                                             │
-(RolloutWorker pid=586260)    seed=None, options=None)'                                                                                                                                                               │
-(RolloutWorker pid=586260)  - Return an additional info dict (empty dict should be fine) from your `reset()`                                                                                                          │
-(RolloutWorker pid=586260)    method.                                                                                                                                                                                 │
-(RolloutWorker pid=586260)  - Return an additional `truncated` flag from your `step()` method (between `done` and                                                                                                     │
-(RolloutWorker pid=586260)    `info`). This flag should indicate, whether the episode was terminated prematurely                                                                                                      │
-(RolloutWorker pid=586260)    due to some time constraint or other kind of horizon setting.                                                                                                                           │
-```
+[Load and eval w/ Tune training](https://github.com/ray-project/ray/blob/master/rllib/examples/sb2rllib_rllib_example.py)
