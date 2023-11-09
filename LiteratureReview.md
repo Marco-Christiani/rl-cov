@@ -160,7 +160,7 @@
         <td>2022</td>
         <td>"Aboussalah, Amine Mohamed; Xu, Ziyun; Lee, Chi-Guhn"</td>
         <td>What is the value of the cross-sectional approach to deep reinforcement learning?</td>
-        <td>Quantitative Finance</td>
+        <td><span style="color: red;">Quantitative Finance</span></td>
         <td>10.1080/14697688.2021.2001032</td>
     </tr>
     <tr>
@@ -208,7 +208,7 @@
         <td>2008</td>
         <td>"Ledoit, Olivier; Wolf, Michael"</td>
         <td>Robust Performance Hypothesis Testing with the Sharpe Ratio</td>
-        <td>Journal of Empirical Finance</td>
+        <td><span style="color: red;">Journal of Empirical Finance</span></td>
         <td>10.1016/J.JEMPFIN.2008.03.002</td>
     </tr>
     <tr>
