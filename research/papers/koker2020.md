@@ -2,7 +2,7 @@
 topic: "RL for PA"
 year: 2020
 author: "Koker, Thomas E.; Koutmos, Dimitrios; Koutmos, Dimitrios"
-title: "<span style=\"color: lightyellow;\">Cryptocurrency Trading Using Machine Learning</span>"
+title: "<strong>Cryptocurrency Trading Using Machine Learning</strong>"
 journal: ""
 doi: "10.3390/jrfm13080178"
 ---

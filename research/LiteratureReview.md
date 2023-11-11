@@ -73,7 +73,7 @@
       <td >RL for PA</td>
       <td >2018</td>
       <td >Xiong, Zhuoran; Liu, Xiao-Yang; Zhong, Shan; Yang, Hongyang; Walid, Anwar</td>
-      <td ><span style="color: lightyellow;">Practical Deep Reinforcement Learning Approach for Stock Trading</span></td>
+      <td ><strong>Practical Deep Reinforcement Learning Approach for Stock Trading</strong></td>
       <td >arXiv:1811.07522 [cs, q-fin, stat]</td>
     </tr>
     <tr>
@@ -101,7 +101,7 @@
       <td >2008</td>
       <td >Ledoit, Olivier; Wolf, Michael</td>
       <td >Robust Performance Hypothesis Testing with the Sharpe Ratio</td>
-      <td ><span style="color: red;">Journal of Empirical Finance</span></td>
+      <td ><strong>Journal of Empirical Finance</strong></td>
     </tr>
     <tr>
       <th >10</th>
@@ -109,7 +109,7 @@
       <td >RL for PA</td>
       <td >2020</td>
       <td >Koker, Thomas E.; Koutmos, Dimitrios; Koutmos, Dimitrios</td>
-      <td ><span style="color: lightyellow;">Cryptocurrency Trading Using Machine Learning</span></td>
+      <td ><strong>Cryptocurrency Trading Using Machine Learning</strong></td>
       <td ></td>
     </tr>
     <tr>
@@ -119,7 +119,7 @@
       <td >2022</td>
       <td >Aboussalah, Amine Mohamed; Xu, Ziyun; Lee, Chi-Guhn</td>
       <td >What is the value of the cross-sectional approach to deep reinforcement learning?</td>
-      <td ><span style="color: red;">Quantitative Finance</span></td>
+      <td ><strong>Quantitative Finance</strong></td>
     </tr>
     <tr>
       <th >12</th>
@@ -163,7 +163,7 @@
       <td >RL for PA</td>
       <td >2021</td>
       <td >Wu, Mu-En; Syu, Jia-Hao; Lin, Jerry Chun-Wei; Ho, Jan-Ming</td>
-      <td ><span style="color: lightyellow;">Portfolio management system in equity market neutral using reinforcement learning</span></td>
+      <td ><strong>Portfolio management system in equity market neutral using reinforcement learning</strong></td>
       <td >Applied Intelligence</td>
     </tr>
     <tr>

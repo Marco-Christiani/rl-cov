@@ -7,19 +7,18 @@ import ray
 from gymnasium.wrappers import FlattenObservation
 from omegaconf import DictConfig
 from omegaconf import OmegaConf
+from ray import air
+from ray import tune
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.evaluation.episode_v2 import EpisodeV2
-from ray.rllib.models import ModelCatalog
 from ray.tune.logger import pretty_print
 
 from rlcov.envs import get_wrapped_env
-from rlcov.models.custom_lstm import SimpleTorchRNNModel
 from rlcov.utils import load_close_from_config
 
 logger = logging.getLogger(__name__)
-context = ray.init(include_dashboard=True, dashboard_host='0.0.0.0')
-
-ModelCatalog.register_custom_model("SimpleTorchRNNModel", SimpleTorchRNNModel)
+# context = ray.init(include_dashboard=True, address='auto', ignore_reinit_error=True, num_gpus=1, local_mode=True)
+context = ray.init()
 
 
 class CustomCallbacks(DefaultCallbacks):
@@ -63,8 +62,6 @@ class CustomCallbacks(DefaultCallbacks):
         metrics_to_log["final_hhi"] = (n * (position_pct ** 2).sum() - 1) / (n - 1)
         metrics_to_log["final_total_return"] = total_return
 
-        formatted_metrics = pformat(metrics_to_log, indent=4)
-        logger.info(formatted_metrics)
         print(pformat(dict(last_info.items())))
 
         for k, v in metrics_to_log.items():
@@ -77,6 +74,28 @@ def main(config: DictConfig):
     logger.info(f"config: {OmegaConf.to_yaml(config)}")
     close_df = load_close_from_config(config)
     logger.info(f'close_df.shape: {close_df.shape}')
+
+    import subprocess
+    import os
+
+    def get_git_commit_hash():
+        try:
+            return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+        except subprocess.CalledProcessError:
+            return "N/A"
+
+    def get_git_diff():
+        try:
+
+            return subprocess.check_output(['git', 'diff']).decode('utf-8').strip()
+        except subprocess.CalledProcessError:
+            return "N/A"
+
+    diff = get_git_diff()
+    git_hash = get_git_commit_hash()
+
+    with open(os.path.join(os.getcwd(), f'diff-{git_hash}.txt'), 'w') as diff_file:
+        diff_file.write(diff)
 
     if close_df.isna().any().any():
         msg = 'Close prices contain NaNs'
@@ -118,32 +137,75 @@ def main(config: DictConfig):
 
     enable_learner_api = True
     if config.use_custom_model:
+        from rlcov import models  # noqa
         model_config = {
             "custom_model": config.custom_model_config.name,
+            "max_seq_len": 10,
         }
         enable_learner_api = False
 
     algo_config = (
         algo_config
         .rl_module(_enable_rl_module_api=enable_learner_api)
+        .framework('torch')
         .callbacks(CustomCallbacks)
-        .training(model=model_config, _enable_learner_api=enable_learner_api,
-                  **OmegaConf.to_container(config.training_args))
-        .resources(**OmegaConf.to_container(config.resources_args))
-        .rollouts(**OmegaConf.to_container(config.rollouts_args))
+        .training(
+            model=model_config,
+            _enable_learner_api=enable_learner_api,
+            **OmegaConf.to_container(config.training_args),
+        )
+        .resources(num_cpus_per_worker=1, num_gpus_per_worker=1)
+        # .resources(**OmegaConf.to_container(config.resources_args))
+        # .rollouts(**OmegaConf.to_container(config.rollouts_args))
+        # .resources(**OmegaConf.to_container(config.resources_args))
+        # .rollouts(**OmegaConf.to_container(config.rollouts_args))
         .environment(env=config.env_config.env, env_config=env_config)
     )
 
-    algo = algo_config.build()
+    # algo = algo_config.build()
+    import gymnasium
+    from ray.tune.registry import register_env
 
-    logger.info('Training')
-    for i in range(1, config.training_iterations + 1):
-        result = algo.train()
-        logger.info(pretty_print(result))
-        if i % config.checkpoint_freq == 0:
-            checkpoint_path = algo.save('models')
-            logger.info(f'saved model to {checkpoint_path}')
+    import ray
+
+    import ray.air
+    from ray.rllib.algorithms.ppo import PPOConfig
+
+    from ray.rllib.policy.policy import PolicySpec
+    from ray.tune.stopper import MaximumIterationStopper
+
+    # Create an RLlib config using multi-agent PPO on mobile-env's small scenario.
+    # config = (
+    #     PPOConfig()
+    #     .environment(env="CartPole-v1")
+    #     .framework("torch")
+    #     # RLlib needs +1 CPU than configured below (for the driver/traininer?)
+    #     .resources(num_cpus_per_worker=1, num_gpus_per_worker=1/16)
+    #     .rollouts(num_rollout_workers=15)
+    # )
+
+    # Create the Trainer/Tuner and define how long to train
+    tuner = ray.tune.Tuner(
+        "PPO",
+        param_space=algo_config.to_dict(),
+    )
+
+    # Run training and save the result
+    result_grid = tuner.fit()
+    logger.info(ray.get_gpu_ids())
+
+    logger.info('BYE')
+    # logger.info('Training')
+    # for i in range(1, config.training_iterations + 1):
+    #     result = algo.train()
+    #     logger.info(pretty_print(result))
+    #     if i % config.checkpoint_freq == 0:
+    #         checkpoint_path = algo.save('models')
+    #         logger.info(f'saved model to {checkpoint_path}')
     # algo.export_policy_model
+
+    # results = tune.run("PPO", config=algo_config.to_dict())
+    # logger.info(pretty_print(results))
 
 
 if __name__ == '__main__':

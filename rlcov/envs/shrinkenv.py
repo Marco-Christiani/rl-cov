@@ -2,7 +2,7 @@
 import gymnasium as gym
 import numpy as np
 import pandas as pd
-from sklearn.covariance import LedoitWolf
+from sklearn.covariance import LedoitWolf, EmpiricalCovariance
 from statsmodels.stats.correlation_tools import cov_nearest
 
 from rlcov import cov
@@ -19,7 +19,8 @@ class ShrinkEnv(RayTradingEnv):
             shape=(1,),
             dtype=np.float64
         )
-        self.cov_estimator = LedoitWolf()
+        self.cov_estimator = EmpiricalCovariance()
+        # self.cov_estimator = LedoitWolf()
         self.ewm_acc = utils.EWMAcc(n_cols=self.num_assets, halflife=.94)
         self.mu_method = config.get("mu_method", "ewm")
         self.shrinkage_target: cov.ShrinkageTarget = cov.ShrinkageTarget[config.get("shrinkage_target", "MeanVar")]

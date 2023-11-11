@@ -2,7 +2,7 @@
 topic: "RL for PA"
 year: 2018
 author: "Xiong, Zhuoran; Liu, Xiao-Yang; Zhong, Shan; Yang, Hongyang; Walid, Anwar"
-title: "<span style=\"color: lightyellow;\">Practical Deep Reinforcement Learning Approach for Stock Trading</span>"
+title: "<strong>Practical Deep Reinforcement Learning Approach for Stock Trading</strong>"
 journal: "arXiv:1811.07522 [cs, q-fin, stat]"
 doi: ""
 ---

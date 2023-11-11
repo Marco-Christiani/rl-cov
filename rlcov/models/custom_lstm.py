@@ -62,12 +62,17 @@ class TorchMLPHead(nn.Module):
 
 class LSTMComplex(RecurrentNetwork, nn.Module):
     def __init__(self, action_space, obs_space, num_outputs, model_config, name: str = "LSTMComplex"):
-        super(LSTMComplex, self).__init__()
+        nn.Module.__init__(self)
+        super().__init__(
+            obs_space=obs_space,
+            action_space=action_space,
+            num_outputs=num_outputs,
+            model_config=model_config,
+            name=name
+        )
         self.encoder = TorchStatefulActorCriticEncoder(obs_space, [64, 64], 32)
         self.pi = TorchMLPHead(32, action_space)
         self.vf = TorchMLPHead(32, 1)
-        nn.Module.__init__(self)
-        RecurrentNetwork.__init__(self, obs_space, action_space, num_outputs, model_config, name)
 
     @override(RecurrentNetwork)
     def forward_rnn(self, inputs, state, seq_lens):
@@ -96,47 +101,6 @@ class LSTMComplex(RecurrentNetwork, nn.Module):
 
 import torch
 import torch.nn as nn
-from ray.rllib.models.preprocessors import get_preprocessor
-from ray.rllib.utils.annotations import override
-
-
-class SimpleTorchRNNModel(RecurrentNetwork, nn.Module):
-    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        nn.Module.__init__(self)
-        super().__init__(obs_space, action_space, num_outputs, model_config, name)
-
-        self.obs_size = get_preprocessor(obs_space)(obs_space).size
-
-        # Encoder: MLP -> LSTM
-        self.mlp = nn.Sequential(
-            nn.Linear(self.obs_size, 64),
-            nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh()
-        )
-        self.lstm = nn.LSTM(64, 32, batch_first=True)
-
-        # Policy and Value heads
-        self.pi = nn.Linear(32, num_outputs)
-        self.vf = nn.Linear(32, 1)
-
-    @override(ModelV2)
-    def get_initial_state(self):
-        return [
-            self.lstm.weight_ih_l0.new(1, 32).zero_().squeeze(0),
-            self.lstm.weight_ih_l0.new(1, 32).zero_().squeeze(0),
-        ]
-
-    @override(ModelV2)
-    def value_function(self):
-        assert self._features is not None, "must call forward() first"
-        return torch.reshape(self.vf(self._features), [-1])
-
-    @override(RecurrentNetwork)
-    def forward_rnn(self, inputs, state, seq_lens):
-        x = self.mlp(inputs)
-        self._features, (h, c) = self.lstm(x, (state[0].unsqueeze(0), state[1].unsqueeze(0)))
-        return self.pi(self._features), [h.squeeze(0), c.squeeze(0)]
 
 
 def test_ppo_torch_rl_module():
