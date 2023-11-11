@@ -1,5 +1,7 @@
 RL for covariance shrinkage factor estimation.
 
+[Literature Review](research/LiteratureReview.md)
+
 [(Mattera 2023) Shrinkage estimation with reinforcement learning of large variance matrices for portfolio selection](https://doi.org/10.1016/j.iswa.2023.200181)
 
 [(Wu et al. 2021) Portfolio management system in equity market neutral using reinforcement learning](https://doi.org/10.1007/s10489-021-02262-0)
@@ -26,6 +28,7 @@ RL for covariance shrinkage factor estimation.
   - **Action space should be symmetric around 0, need to fix this**
 - Implement minimum reweight delta (i.e. change in 1% shouldnt trigger trades)
 - Feature engineering
+- Use minvar weights, GMV, risk ratio measurment (ideally close to 1)
 
 ## Notes
 
@@ -49,3 +52,5 @@ RL for covariance shrinkage factor estimation.
 [Evaluation callback](https://github.com/ray-project/ray/blob/master/rllib/examples/parallel_evaluation_and_training.py)
 
 [Load and eval w/ Tune training](https://github.com/ray-project/ray/blob/master/rllib/examples/sb2rllib_rllib_example.py)
+
+## Softwex
