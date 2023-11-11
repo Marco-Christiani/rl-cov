@@ -48,28 +48,27 @@ def custom_row_style(row):
     return [''] * len(row)
 
 
-def compile_frontmatter_to_table(directory: Path) -> str:
+def compile_frontmatter_to_table(directory: Path, use_styles: bool = False) -> str:
     frontmatter_list = []
     for f in directory.glob('*.md'):
         frontmatter_list.append({'filename': f'<a href={f.relative_to(research_dir)}>{f.name}</a>'}
                                 | extract_frontmatter(f))
 
     df = pd.DataFrame(frontmatter_list)
-    df.index.name = '#'
     df = df.applymap(format_list_for_html)
-    css_style = [
-        {
+    styler = df.style
+    if use_styles:
+        styler.set_table_styles([{
             'selector': 'th, td',
             'props': [
                 ('word-wrap', 'break-word'),
                 ('max-width', '350px')
             ]
-        }
-    ]
-    styler = df.style.set_table_styles(css_style)
+        }])
     if yaml_style_key in df.columns:
         styler = styler.apply(custom_row_style, axis=1).hide(yaml_style_key, axis=1)
-    return styler.to_html()
+    styler = styler.hide('doi', axis=1)
+    return styler.to_html(index=False, exclude_styles=not use_styles)
 
 
 if __name__ == "__main__":

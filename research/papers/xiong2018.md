@@ -2,7 +2,7 @@
 topic: "RL for PA"
 year: 2018
 author: "Xiong, Zhuoran; Liu, Xiao-Yang; Zhong, Shan; Yang, Hongyang; Walid, Anwar"
-title: "Practical Deep Reinforcement Learning Approach for Stock Trading"
+title: "<span style=\"color: lightyellow;\">Practical Deep Reinforcement Learning Approach for Stock Trading</span>"
 journal: "arXiv:1811.07522 [cs, q-fin, stat]"
 doi: ""
 ---
@@ -10,6 +10,7 @@ doi: ""
 <strong>
 Xiong, Zhuoran, Xiao-Yang Liu, Shan Zhong, Hongyang Yang, and Anwar Walid. "Practical Deep Reinforcement Learning Approach for Stock Trading." arXiv:1811.07522 [Cs, q-Fin, Stat], December 1, 2018. http://arxiv.org/abs/1811.07522.
 </strong>
+
 
 **Methodology**: DDPG RL agent to make stock trading decisions.
 

@@ -2,7 +2,7 @@
 topic: "RL for PA"
 year: 2020
 author: "Koker, Thomas E.; Koutmos, Dimitrios; Koutmos, Dimitrios"
-title: "Cryptocurrency Trading Using Machine Learning"
+title: "<span style=\"color: lightyellow;\">Cryptocurrency Trading Using Machine Learning</span>"
 journal: ""
 doi: "10.3390/jrfm13080178"
 ---
@@ -10,6 +10,7 @@ doi: "10.3390/jrfm13080178"
 <strong>
 Koker, Thomas E., Dimitrios Koutmos, and Dimitrios Koutmos. "Cryptocurrency Trading Using Machine Learning" 13, no. 8 (August 10, 2020): 178. https://doi.org/10.3390/jrfm13080178.
 </strong>
+
 
 **Methodology:** Direct reinforcement (DR) learning model to make trading decisions that optimize risk-adjusted returns
 
