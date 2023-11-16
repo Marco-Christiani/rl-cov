@@ -14,9 +14,15 @@ Xiong, Zhuoran, Xiao-Yang Liu, Shan Zhong, Hongyang Yang, and Anwar Walid. "Prac
 
 **Methodology**: DDPG RL agent to make stock trading decisions.
 
-**Network Architecture:**
+**Network Architecture:** Not mentioned.
 
-**Algorithms:** DDPG. Reward is change in portfolio value.
+**Observation Space**: [p, h, b]: the prices of stocks, the amount of holdings of stocks, and the remaining balance.
+
+**Action Space**: sell/hold/buy x N
+
+**Rewards:** Raw change in portfolio value.
+
+**Algorithms:** DDPG.
 
 **Training and Testing Data:** Used 6 years of daily stock price data (2009-2014) for 30 Dow Jones stocks for training, 1 year (2015) for validation, and 2.75 years (2016-2018) for testing.
 
