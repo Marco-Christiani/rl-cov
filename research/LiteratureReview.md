@@ -91,7 +91,7 @@
       <td >RL for PA</td>
       <td >2018</td>
       <td >Li, Jinke; Rao, Ruonan; Shi, Jun</td>
-      <td >Learning to Trade with Deep Actor Critic Methods</td>
+      <td ><strong>Learning to Trade with Deep Actor Critic Methods</strong></td>
       <td ></td>
     </tr>
     <tr>
